@@ -22,11 +22,35 @@ Deno.serve(async (req) => {
     if (action === "start") {
       // Expire any previous session before creating a new one.
       await db.from("lessons").update({ active: false }).eq("active", true);
-      const { data, error } = await db.from("lessons")
-        .insert({ name: typeof name === "string" ? name.slice(0, 60) : "Unterricht", active: true })
-        .select("id,name,created_at,expires_at,active").single();
-      if (error || !data) return json({ error: "Unterrichtssitzung konnte nicht gestartet werden." }, 500);
-      return json({ session: data });
+      
+const { error: deactivateError } = await db
+  .from("lessons")
+  .update({ active: false })
+  .eq("active", true);
+
+if (deactivateError) {
+  console.error("SESSION DEACTIVATION FAILED:", deactivateError);
+  return json({ error: "Vorherige Sitzung konnte nicht beendet werden." }, 500);
+}
+
+const { data, error } = await db
+  .from("lessons")
+  .insert({
+    name: typeof name === "string" ? name.slice(0, 60) : "Unterricht",
+    active: true
+  })
+  .select("id,name,created_at,expires_at,active")
+  .single();
+
+if (error || !data) {
+  console.error("SESSION INSERT FAILED:", error);
+  return json({
+    error: "Unterrichtssitzung konnte nicht gestartet werden."
+  }, 500);
+}
+
+return json({ session: data });
+
     }
 
     if (action === "end" && typeof lesson_id === "string") {
