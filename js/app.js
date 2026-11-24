@@ -5,6 +5,7 @@
   const $ = (selector) => document.querySelector(selector);
   const els = {
     connection: $("#connectionStatus"),
+    themeToggle: $("#themeToggle"),
     sessionTitle: $("#sessionTitle"),
     sessionPill: $("#sessionPill"),
     sessionActions: $("#sessionActions"),
@@ -24,12 +25,77 @@
   };
 
   const TOKEN_STORAGE_KEY = "queueclass.ownerTokens.v1";
+  const THEME_STORAGE_KEY = "queueclass.theme.v1";
   let supabase = null;
   let currentSession = null;
   let messages = [];
   let channel = null;
   let isBusy = false;
   let ownerTokens = readOwnerTokens();
+
+  function getPreferredTheme() {
+    try {
+      const saved = localStorage.getItem(THEME_STORAGE_KEY);
+      if (saved === "light" || saved === "dark") return saved;
+    } catch {
+      // Ignore storage errors
+    }
+    if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
+      return "dark";
+    }
+    return "light";
+  }
+
+  function applyTheme(theme, persist = false) {
+    const resolved = theme === "dark" ? "dark" : "light";
+    document.documentElement.dataset.theme = resolved;
+    document.documentElement.style.colorScheme = resolved;
+    const metaTheme = document.querySelector('meta[name="theme-color"]');
+    if (metaTheme) {
+      metaTheme.setAttribute("content", resolved === "dark" ? "#111315" : "#f7f8fa");
+    }
+    if (els.themeToggle) {
+      const isDark = resolved === "dark";
+      els.themeToggle.setAttribute("aria-pressed", String(isDark));
+      els.themeToggle.setAttribute(
+        "aria-label",
+        isDark ? "Helles Design aktivieren" : "Dunkles Design aktivieren"
+      );
+    }
+    if (persist) {
+      try {
+        localStorage.setItem(THEME_STORAGE_KEY, resolved);
+      } catch {
+        // Ignore storage errors
+      }
+    }
+  }
+
+  function initTheme() {
+    applyTheme(getPreferredTheme(), false);
+    if (els.themeToggle) {
+      els.themeToggle.addEventListener("click", () => {
+        const current = document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+        applyTheme(current === "dark" ? "light" : "dark", true);
+      });
+    }
+    if (window.matchMedia) {
+      const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+      const handleSystemChange = (event) => {
+        try {
+          if (localStorage.getItem(THEME_STORAGE_KEY)) return;
+        } catch {
+          // Ignore storage errors
+        }
+        applyTheme(event.matches ? "dark" : "light", false);
+      };
+      if (typeof mediaQuery.addEventListener === "function") {
+        mediaQuery.addEventListener("change", handleSystemChange);
+      } else if (typeof mediaQuery.addListener === "function") {
+        mediaQuery.addListener(handleSystemChange);
+      }
+    }
+  }
 
   function readOwnerTokens() {
     try { return JSON.parse(localStorage.getItem(TOKEN_STORAGE_KEY) || "{}"); }
@@ -78,7 +144,8 @@
       ? (currentSession.name || "Unterricht läuft")
       : "Noch keine Stunde gestartet";
     els.sessionPill.classList.toggle("active", active);
-    els.sessionPill.lastChild.textContent = active ? " Aktiv" : " Inaktiv";
+    const pillLabel = els.sessionPill.lastElementChild || els.sessionPill.lastChild;
+    pillLabel.textContent = active ? "Aktiv" : "Inaktiv";
     els.sessionActions.hidden = active;
     els.end.hidden = !active;
     updateFormState();
@@ -95,14 +162,13 @@
     if (!sorted.length) {
       const empty = document.createElement("div");
       empty.className = "empty-state";
-      const icon = document.createElement("div");
-      icon.className = "empty-icon";
-      icon.textContent = "↳";
-      const title = document.createElement("strong");
-      title.textContent = "Noch keine Meldungen";
+      const title = document.createElement("p");
+      title.className = "empty-title";
+      title.textContent = "Keine offenen Meldungen";
       const copy = document.createElement("p");
-      copy.textContent = "Die Warteschlange ist momentan leer.";
-      empty.append(icon, title, copy);
+      copy.className = "empty-copy";
+      copy.textContent = "Sobald Fragen eingehen, erscheinen sie hier in Reihenfolge.";
+      empty.append(title, copy);
       els.queue.append(empty);
       return;
     }
@@ -110,6 +176,7 @@
     sorted.forEach((message, index) => {
       const item = document.createElement("article");
       item.className = "queue-item";
+      item.setAttribute("role", "listitem");
 
       const position = document.createElement("div");
       position.className = "queue-position";
@@ -338,6 +405,7 @@
   }
 
   async function init() {
+    initTheme();
     initEvents();
     updateFormState();
 

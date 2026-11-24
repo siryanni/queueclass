@@ -1,95 +1,191 @@
 <!doctype html>
-<html lang="de">
+<html lang="de" data-theme="light">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f7f8fa">
-  <meta name="description" content="Eine einfache, gemeinsame Warteschlange für Fragen im Unterricht.">
+  <meta name="description" content="Gemeinsame Warteschlange für Fragen im Unterricht.">
   <title>QueueClass</title>
+  <script>
+    (() => {
+      const STORAGE_KEY = "queueclass.theme.v1";
+      let theme = "light";
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved === "light" || saved === "dark") {
+          theme = saved;
+        } else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
+          theme = "dark";
+        }
+      } catch {
+        // Ignore storage/matchMedia restrictions
+      }
+      document.documentElement.dataset.theme = theme;
+      document.documentElement.style.colorScheme = theme;
+      const metaTheme = document.querySelector('meta[name="theme-color"]');
+      if (metaTheme) {
+        metaTheme.setAttribute("content", theme === "dark" ? "#111315" : "#f7f8fa");
+      }
+    })();
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script defer src="js/config.js"></script>
   <script defer src="js/app.js"></script>
 </head>
 <body>
-  <main class="shell">
-    <header class="topbar">
+  <header class="topbar">
+    <div class="topbar-inner">
       <a class="brand" href="#" aria-label="QueueClass Startseite">
-        <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span>
-        <span>Queue<span class="brand-light">Class</span></span>
+        <span class="brand-mark" aria-hidden="true">
+          <span></span>
+          <span></span>
+          <span></span>
+        </span>
+        <span>QueueClass</span>
       </a>
-      <div class="connection" id="connectionStatus"><span class="status-dot"></span><span>Verbinde …</span></div>
-    </header>
 
-    <section class="intro">
-      <p class="eyebrow">GEMEINSAME MELDELISTE</p>
-      <h1>Fragen. Warten.<br><span>Weiterlernen.</span></h1>
-      <p class="intro-copy">Trag deine Frage ein. Die Reihenfolge bleibt fair und für alle sichtbar.</p>
+      <div class="topbar-controls">
+        <div class="connection" id="connectionStatus" role="status" aria-live="polite">
+          <span class="status-dot" aria-hidden="true"></span>
+          <span>Verbinde …</span>
+        </div>
+        <button
+          class="theme-toggle"
+          id="themeToggle"
+          type="button"
+          aria-label="Dunkles Design aktivieren"
+          aria-pressed="false"
+        >
+          <span class="theme-icon theme-icon-sun" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <circle cx="8" cy="8" r="3.2" stroke="currentColor" stroke-width="1.5" />
+              <path d="M8 1.5V3M8 13V14.5M1.5 8H3M13 8H14.5M3.4 3.4L4.5 4.5M11.5 11.5L12.6 12.6M12.6 3.4L11.5 4.5M4.5 11.5L3.4 12.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+            </svg>
+          </span>
+          <span class="theme-icon theme-icon-moon" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M13.2 10.3A5.5 5.5 0 0 1 5.7 2.8a5.5 5.5 0 1 0 7.5 7.5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+            </svg>
+          </span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="shell">
+    <section class="page-head" aria-labelledby="pageTitle">
+      <div>
+        <h1 id="pageTitle">Fragenwarteschlange</h1>
+        <p class="page-subtitle">Gemeinsame Meldeliste für den Unterricht in Eingangsreihenfolge.</p>
+      </div>
     </section>
 
-    <section class="session-card" aria-live="polite">
-      <div class="session-meta">
-        <div>
-          <p class="section-kicker">AKTUELLE SITZUNG</p>
-          <h2 id="sessionTitle">Noch keine Stunde gestartet</h2>
-        </div>
-        <span class="live-pill" id="sessionPill"><span></span> Inaktiv</span>
-      </div>
-      <div class="session-actions" id="sessionActions">
-        <button class="button button-primary" id="startSessionButton" type="button">Stunde starten <span aria-hidden="true">→</span></button>
-        <p class="microcopy">Eine gemeinsame Sitzung für eure Klasse.</p>
-      </div>
-    </section>
-
-    <section class="content-grid">
-      <section class="panel compose-panel" aria-labelledby="composeTitle">
-        <div class="panel-heading">
-          <div class="step-number">01</div>
-          <div><p class="section-kicker">DEINE FRAGE</p><h2 id="composeTitle">Meldung hinzufügen</h2></div>
-        </div>
-        <form id="messageForm">
-          <label for="question">Wobei brauchst du Hilfe?</label>
-          <textarea id="question" name="question" maxlength="200" rows="3" placeholder="z. B. Aufgabe 4b – ich verstehe den Rechenweg nicht …" required></textarea>
-          <div class="field-footer"><span>Maximal 200 Zeichen</span><span id="charCount">0 / 200</span></div>
-          <label for="initials" class="initials-label">Dein Kürzel</label>
-          <input id="initials" name="initials" type="text" maxlength="4" placeholder="z. B. YY" autocomplete="off" autocapitalize="characters" required>
-          <button class="button button-primary submit-button" id="submitButton" type="submit" disabled>+ Meldung hinzufügen</button>
-          <p class="form-note" id="formNote">Starte zuerst die Unterrichtsstunde.</p>
-        </form>
-      </section>
-
-      <section class="panel queue-panel" aria-labelledby="queueTitle">
-        <div class="queue-heading">
-          <div class="panel-heading compact">
-            <div class="step-number">02</div>
-            <div><p class="section-kicker">FIRST IN, FIRST OUT</p><h2 id="queueTitle">Warteschlange</h2></div>
+    <div class="workspace-grid">
+      <div class="sidebar-stack">
+        <section class="session-block" aria-labelledby="sessionTitle" aria-live="polite">
+          <div class="session-header">
+            <div>
+              <p class="section-label">Sitzung</p>
+              <h2 id="sessionTitle">Noch keine Stunde gestartet</h2>
+            </div>
+            <span class="status-badge" id="sessionPill">
+              <span class="status-dot" aria-hidden="true"></span>
+              <span>Inaktiv</span>
+            </span>
           </div>
-          <span class="count-badge" id="messageCount">0</span>
+          <div class="session-actions" id="sessionActions">
+            <button class="button button-primary" id="startSessionButton" type="button">
+              Stunde starten
+            </button>
+            <p class="microcopy">Gemeinsame Sitzung für die Klasse.</p>
+          </div>
+        </section>
+
+        <section class="compose-block" aria-labelledby="composeTitle">
+          <div class="section-header">
+            <p class="section-label">Neue Meldung</p>
+            <h2 id="composeTitle">Frage einreihen</h2>
+          </div>
+
+          <form id="messageForm" novalidate>
+            <div class="field-group">
+              <label for="question">Frage oder Anliegen</label>
+              <textarea
+                id="question"
+                name="question"
+                maxlength="200"
+                rows="3"
+                placeholder="z. B. Aufgabe 4b – Rechenweg unklar"
+                required
+              ></textarea>
+              <div class="field-meta">
+                <span>Max. 200 Zeichen</span>
+                <span id="charCount">0 / 200</span>
+              </div>
+            </div>
+
+            <div class="field-group">
+              <label for="initials">Kürzel</label>
+              <input
+                id="initials"
+                name="initials"
+                type="text"
+                maxlength="4"
+                placeholder="z. B. YY"
+                autocomplete="off"
+                autocapitalize="characters"
+                required
+              >
+            </div>
+
+            <button class="button button-primary submit-button" id="submitButton" type="submit" disabled>
+              Meldung hinzufügen
+            </button>
+            <p class="form-note" id="formNote">Starte zuerst die Unterrichtsstunde.</p>
+          </form>
+        </section>
+      </div>
+
+      <section class="queue-section" aria-labelledby="queueTitle">
+        <div class="queue-header">
+          <div>
+            <p class="section-label">Reihenfolge</p>
+            <h2 id="queueTitle">Warteschlange</h2>
+          </div>
+          <span class="count-readout" id="messageCount" aria-label="Anzahl offener Meldungen">0</span>
         </div>
-        <div id="queueList" class="queue-list">
-          <div class="empty-state"><div class="empty-icon">↳</div><strong>Noch keine Meldungen</strong><p>Die Warteschlange ist momentan leer.</p></div>
+
+        <div id="queueList" class="queue-list" role="list">
+          <div class="empty-state">
+            <p class="empty-title">Keine offenen Meldungen</p>
+            <p class="empty-copy">Sobald Fragen eingehen, erscheinen sie hier in Reihenfolge.</p>
+          </div>
         </div>
-        <div class="queue-footer"><span class="queue-indicator"></span><span>Änderungen erscheinen automatisch</span></div>
+
+        <div class="queue-footer">
+          <span class="queue-sync-dot" aria-hidden="true"></span>
+          <span>Live-Synchronisierung aktiv</span>
+        </div>
       </section>
-    </section>
+    </div>
 
     <footer class="footer">
-      <span>QueueClass <span class="footer-separator">/</span> Minimal. Fair. Gemeinsam.</span>
+      <span>QueueClass</span>
       <button class="text-button" id="endSessionButton" type="button" hidden>Stunde beenden</button>
     </footer>
   </main>
 
   <div class="toast-region" id="toastRegion" aria-live="polite" aria-atomic="true"></div>
 
-  <dialog class="confirm-dialog" id="endDialog">
+  <dialog class="confirm-dialog" id="endDialog" aria-labelledby="endDialogTitle">
     <form method="dialog">
-      <div class="dialog-icon">✓</div>
-      <p class="section-kicker">SITZUNG ABSCHLIESSEN</p>
-      <h2>Stunde wirklich beenden?</h2>
-      <p>Alle offenen Meldungen dieser Sitzung werden dauerhaft gelöscht. Das lässt sich nicht rückgängig machen.</p>
+      <p class="section-label">Sitzung abschließen</p>
+      <h2 id="endDialogTitle">Stunde beenden?</h2>
+      <p class="dialog-copy">Alle offenen Meldungen dieser Sitzung werden dauerhaft gelöscht.</p>
       <div class="dialog-actions">
         <button class="button button-secondary" value="cancel">Abbrechen</button>
         <button class="button button-danger" id="confirmEndButton" value="confirm">Stunde beenden</button>
