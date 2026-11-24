@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f8fa">
+  <meta name="description" content="Eine einfache, gemeinsame Warteschlange für Fragen im Unterricht.">
+  <title>QueueClass</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script defer src="js/config.js"></script>
+  <script defer src="js/app.js"></script>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="QueueClass Startseite">
+        <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span>
+        <span>Queue<span class="brand-light">Class</span></span>
+      </a>
+      <div class="connection" id="connectionStatus"><span class="status-dot"></span><span>Verbinde …</span></div>
+    </header>
+
+    <section class="intro">
+      <p class="eyebrow">GEMEINSAME MELDELISTE</p>
+      <h1>Fragen. Warten.<br><span>Weiterlernen.</span></h1>
+      <p class="intro-copy">Trag deine Frage ein. Die Reihenfolge bleibt fair und für alle sichtbar.</p>
+    </section>
+
+    <section class="session-card" aria-live="polite">
+      <div class="session-meta">
+        <div>
+          <p class="section-kicker">AKTUELLE SITZUNG</p>
+          <h2 id="sessionTitle">Noch keine Stunde gestartet</h2>
+        </div>
+        <span class="live-pill" id="sessionPill"><span></span> Inaktiv</span>
+      </div>
+      <div class="session-actions" id="sessionActions">
+        <button class="button button-primary" id="startSessionButton" type="button">Stunde starten <span aria-hidden="true">→</span></button>
+        <p class="microcopy">Eine gemeinsame Sitzung für eure Klasse.</p>
+      </div>
+    </section>
+
+    <section class="content-grid">
+      <section class="panel compose-panel" aria-labelledby="composeTitle">
+        <div class="panel-heading">
+          <div class="step-number">01</div>
+          <div><p class="section-kicker">DEINE FRAGE</p><h2 id="composeTitle">Meldung hinzufügen</h2></div>
+        </div>
+        <form id="messageForm">
+          <label for="question">Wobei brauchst du Hilfe?</label>
+          <textarea id="question" name="question" maxlength="200" rows="3" placeholder="z. B. Aufgabe 4b – ich verstehe den Rechenweg nicht …" required></textarea>
+          <div class="field-footer"><span>Maximal 200 Zeichen</span><span id="charCount">0 / 200</span></div>
+          <label for="initials" class="initials-label">Dein Kürzel</label>
+          <input id="initials" name="initials" type="text" maxlength="4" placeholder="z. B. YY" autocomplete="off" autocapitalize="characters" required>
+          <button class="button button-primary submit-button" id="submitButton" type="submit" disabled>+ Meldung hinzufügen</button>
+          <p class="form-note" id="formNote">Starte zuerst die Unterrichtsstunde.</p>
+        </form>
+      </section>
+
+      <section class="panel queue-panel" aria-labelledby="queueTitle">
+        <div class="queue-heading">
+          <div class="panel-heading compact">
+            <div class="step-number">02</div>
+            <div><p class="section-kicker">FIRST IN, FIRST OUT</p><h2 id="queueTitle">Warteschlange</h2></div>
+          </div>
+          <span class="count-badge" id="messageCount">0</span>
+        </div>
+        <div id="queueList" class="queue-list">
+          <div class="empty-state"><div class="empty-icon">↳</div><strong>Noch keine Meldungen</strong><p>Die Warteschlange ist momentan leer.</p></div>
+        </div>
+        <div class="queue-footer"><span class="queue-indicator"></span><span>Änderungen erscheinen automatisch</span></div>
+      </section>
+    </section>
+
+    <footer class="footer">
+      <span>QueueClass <span class="footer-separator">/</span> Minimal. Fair. Gemeinsam.</span>
+      <button class="text-button" id="endSessionButton" type="button" hidden>Stunde beenden</button>
+    </footer>
+  </main>
+
+  <div class="toast-region" id="toastRegion" aria-live="polite" aria-atomic="true"></div>
+
+  <dialog class="confirm-dialog" id="endDialog">
+    <form method="dialog">
+      <div class="dialog-icon">✓</div>
+      <p class="section-kicker">SITZUNG ABSCHLIESSEN</p>
+      <h2>Stunde wirklich beenden?</h2>
+      <p>Alle offenen Meldungen dieser Sitzung werden dauerhaft gelöscht. Das lässt sich nicht rückgängig machen.</p>
+      <div class="dialog-actions">
+        <button class="button button-secondary" value="cancel">Abbrechen</button>
+        <button class="button button-danger" id="confirmEndButton" value="confirm">Stunde beenden</button>
+      </div>
+    </form>
+  </dialog>
+</body>
+</html>

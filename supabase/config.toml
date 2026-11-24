@@ -1,0 +1,8 @@
+[functions.create-message]
+verify_jwt = false
+
+[functions.delete-message]
+verify_jwt = false
+
+[functions.manage-session]
+verify_jwt = false
